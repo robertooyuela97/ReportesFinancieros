@@ -1,47 +1,35 @@
 <?php
-// Archivo: backend/api-empresas/index.php
-// Esta función manejará la ruta para obtener la lista de empresas.
+// config.php
 
-// Incluye la lógica de conexión a la base de datos
-require_once __DIR__ . '/db_connector.php'; 
+// ----------------------------------------------------------------------
+// Configuración de la Conexión a la Base de Datos (SQL Server/MySQL)
+//
+// ADVERTENCIA: Reemplaza estos valores con tus credenciales reales.
+// ----------------------------------------------------------------------
 
-// Establecer encabezados CORS (CRÍTICO para GitHub Pages)
-header("Access-Control-Allow-Origin: *"); 
-header("Access-Control-Allow-Methods: GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Content-Type: application/json");
+// Tipo de base de datos que estás utilizando.
+// Si usas SQL Server (MSSQL), asegúrate de tener el driver PDO_SQLSRV instalado.
+define('DB_TYPE', 'sqlsrv'); 
 
-// Manejo de la solicitud OPTIONS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+// Parámetros de conexión (ACTUALIZADOS PARA AZURE SQL DATABASE)
+define('DB_HOST', 'eegobd.database.windows.net'); // Servidor de Azure
+define('DB_NAME', 'ProyectoContable_G2BD2v2');  // Nueva Base de Datos
+define('DB_USER', 'eego');                       // Usuario
+define('DB_PASS', 'Roki2610@');                  // Contraseña
+// Puerto (Predeterminado para Azure SQL Database)
+define('DB_PORT', '1433'); 
 
-function getEmpresas(PDO $conn): array {
-    $query = "SELECT REG_Empresa, Nombre_empresa FROM Principal ORDER BY Nombre_empresa";
-    $stmt = $conn->prepare($query);
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
+// ----------------------------------------------------------------------
+// Configuración de Seguridad y CORS
+// ----------------------------------------------------------------------
 
-try {
-    $conn = getDbConnection();
+// Orígenes permitidos para peticiones CORS. Usa '*' para desarrollo.
+// ¡IMPORTANTE!: En producción, cámbialo a tu dominio específico.
+define('ALLOWED_ORIGINS', '*');
 
-    if ($conn === null) {
-        http_response_code(500);
-        echo json_encode(['status' => 'error', 'message' => 'Falló la conexión a la base de datos.']);
-        exit();
-    }
+// Establece la zona horaria (útil para logs o manejo de fechas)
+date_default_timezone_set('America/Tegucigalpa'); 
 
-    $empresas = getEmpresas($conn);
-
-    echo json_encode(['status' => 'success', 'data' => $empresas]);
-
-} catch (PDOException $e) {
-    http_response_code(500);
-    error_log("Error SQL: " . $e->getMessage());
-    echo json_encode(['status' => 'error', 'message' => 'Error al obtener empresas: ' . $e->getMessage()]);
-}
 ?>
-File: db_connector.php
 <?php
+// index.php
