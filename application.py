@@ -1,23 +1,21 @@
 import os
 import pyodbc
 import json
-# Se agrega 'send_from_directory' para servir el index.html
 from flask import Flask, jsonify, request, send_from_directory 
 from flask_cors import CORS 
 
 # ***************************************************************
-# MODIFICACIÓN CLAVE: Inicialización de la Aplicación Flask
+# MODIFICACIÓN CRÍTICA PARA AWS ELASTIC BEANSTALK / RENDER
 # ***************************************************************
 
-# Creamos la aplicación Flask, indicando las rutas personalizadas:
-# 1. static_folder: Dónde encontrar CSS, JS (rutas relativas a la carpeta del app.py)
-# 2. template_folder: Dónde encontrar el index.html
-app = Flask(__name__, 
-            static_folder='../frontend/static', 
-            template_folder='../frontend') 
+# 1. CAMBIO DE NOMBRE: La instancia se llama 'application' (por defecto de Gunicorn/EB).
+# 2. CAMBIO DE RUTAS: Se asume una estructura plana: 'static' y 'templates' están en la raíz.
+application = Flask(__name__, 
+            static_folder='static',  # Busca en la carpeta 'static' en el mismo nivel
+            template_folder='templates') # Busca en la carpeta 'templates' en el mismo nivel
 
 # Aplicamos CORS a toda la aplicación. 
-CORS(app) 
+CORS(application) 
 
 # ***************************************************************
 # CONFIGURACIÓN DE LA CONEXIÓN A AZURE SQL
@@ -26,10 +24,10 @@ CORS(app)
 def get_db_connection():
     """
     Establece y retorna la conexión a Azure SQL Server usando pyodbc.
-    Las credenciales se obtienen de las variables de entorno de Render.
+    Las credenciales se obtienen de las variables de entorno (Render/EB).
     """
     try:
-        # Los valores se inyectan desde las variables de entorno configuradas en Render.
+        # Se obtiene el driver por defecto, o el valor de la variable de entorno.
         DB_DRIVER = os.getenv('DB_DRIVER', '{ODBC Driver 17 for SQL Server}')
         DB_SERVER = os.getenv('DB_SERVER')
         DB_DATABASE = os.getenv('DB_DATABASE')
@@ -37,7 +35,8 @@ def get_db_connection():
         DB_PASSWORD = os.getenv('DB_PASSWORD')
 
         if not all([DB_SERVER, DB_DATABASE, DB_USERNAME, DB_PASSWORD]):
-             raise ValueError("Faltan variables de entorno de conexión a la base de datos.")
+            # En caso de faltar variables, lanza un error claro.
+            raise ValueError("Faltan variables de entorno de conexión a la base de datos.")
 
         # Construcción de la cadena de conexión para Azure SQL
         conn_str = (
@@ -57,22 +56,25 @@ def get_db_connection():
         raise
     except pyodbc.Error as ex:
         sqlstate = ex.args[0]
+        # Devuelve solo una parte del error para evitar exponer detalles sensibles.
+        error_detail = ex.args[1] if len(ex.args) > 1 else str(ex)
         print(f"ERROR DE CONEXIÓN A DB (SQLSTATE: {sqlstate}): {ex}")
-        raise Exception(f"Error al conectar con la base de datos: {ex.args[1]}")
+        raise Exception(f"Error al conectar con la base de datos: {error_detail}")
 
 
 # ***************************************************************
 # RUTAS DEL API
 # ***************************************************************
 
-# NUEVA RUTA: Sirve el frontend (index.html) en la URL raíz
-@app.route('/')
+# RUTA: Sirve el frontend (index.html) en la URL raíz
+@application.route('/')
 def serve_frontend():
-    """Sirve el archivo index.html cuando se accede a la URL principal de Render."""
-    # Busca 'index.html' dentro de la carpeta definida como template_folder ('../frontend')
-    return send_from_directory(app.template_folder, 'index.html')
+    """Sirve el archivo index.html cuando se accede a la URL principal."""
+    # Ahora busca 'index.html' dentro de la carpeta 'templates'
+    # Nota: template_folder se cambió a 'templates'
+    return send_from_directory('templates', 'index.html')
 
-@app.route('/test', methods=['GET'])
+@application.route('/test', methods=['GET'])
 def test_connection():
     """Prueba la conexión a la base de datos."""
     conn = None
@@ -88,7 +90,7 @@ def test_connection():
             # Asegura que la conexión se cierre incluso si falla
             conn.close()
 
-@app.route('/reporte-vista/<view_name>/<int:id_empresa>', methods=['GET'])
+@application.route('/reporte-vista/<view_name>/<int:id_empresa>', methods=['GET'])
 def get_reporte_vista(view_name, id_empresa):
     """
     Obtiene los datos de una vista (view) específica para una empresa dada.
@@ -101,6 +103,7 @@ def get_reporte_vista(view_name, id_empresa):
         # Consulta segura
         query = f"SELECT * FROM {view_name} WHERE Id_Empresa = ?"
         
+        # Nota: pyodbc maneja la inyección de parámetros automáticamente
         cursor.execute(query, id_empresa)
         
         # Obtener los nombres de las columnas
@@ -115,6 +118,7 @@ def get_reporte_vista(view_name, id_empresa):
         return jsonify({"status": "success", "data": reporte}), 200
 
     except pyodbc.ProgrammingError as e:
+        # Error común si la vista no existe o hay un problema en la consulta
         error_message = f"Error SQL: La vista '{view_name}' no existe o el query falló. Detalle: {e}"
         print(f"ERROR SQL en /reporte-vista/{view_name}: {e}")
         return jsonify({"status": "error", "message": error_message}), 500
@@ -130,6 +134,6 @@ def get_reporte_vista(view_name, id_empresa):
 # INICIO DE LA APLICACIÓN FLASK
 # ***************************************************************
 
-# Se mantiene comentado, ya que Render usará Gunicorn (web: gunicorn backend.app:app)
+# Este bloque es para desarrollo local, Gunicorn/EB lo ignora en producción
 # if __name__ == '__main__':
-#     app.run(debug=True)
+#     application.run(debug=True)
