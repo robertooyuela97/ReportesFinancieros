@@ -1,14 +1,22 @@
 import os
 import pyodbc
 import json
-from flask import Flask, jsonify, request
-from flask_cors import CORS # Importamos CORS para permitir la conexión desde el frontend
+# Se agrega 'send_from_directory' para servir el index.html
+from flask import Flask, jsonify, request, send_from_directory 
+from flask_cors import CORS 
 
-# Creamos la aplicación Flask
-app = Flask(__name__)
+# ***************************************************************
+# MODIFICACIÓN CLAVE: Inicialización de la Aplicación Flask
+# ***************************************************************
+
+# Creamos la aplicación Flask, indicando las rutas personalizadas:
+# 1. static_folder: Dónde encontrar CSS, JS (rutas relativas a la carpeta del app.py)
+# 2. template_folder: Dónde encontrar el index.html
+app = Flask(__name__, 
+            static_folder='../frontend/static', 
+            template_folder='../frontend') 
 
 # Aplicamos CORS a toda la aplicación. 
-# Esto es CRUCIAL para que el frontend (en un dominio diferente) pueda comunicarse.
 CORS(app) 
 
 # ***************************************************************
@@ -57,6 +65,13 @@ def get_db_connection():
 # RUTAS DEL API
 # ***************************************************************
 
+# NUEVA RUTA: Sirve el frontend (index.html) en la URL raíz
+@app.route('/')
+def serve_frontend():
+    """Sirve el archivo index.html cuando se accede a la URL principal de Render."""
+    # Busca 'index.html' dentro de la carpeta definida como template_folder ('../frontend')
+    return send_from_directory(app.template_folder, 'index.html')
+
 @app.route('/test', methods=['GET'])
 def test_connection():
     """Prueba la conexión a la base de datos."""
@@ -77,17 +92,13 @@ def test_connection():
 def get_reporte_vista(view_name, id_empresa):
     """
     Obtiene los datos de una vista (view) específica para una empresa dada.
-    
-    view_name: El nombre de la vista en la base de datos (e.g., 'vista_balance_general').
-    id_empresa: El ID de la empresa para filtrar los datos.
     """
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Consulta segura: Utilizamos f-strings solo para el nombre de la vista
-        # y pasamos el ID de la empresa como parámetro para evitar inyección SQL.
+        # Consulta segura
         query = f"SELECT * FROM {view_name} WHERE Id_Empresa = ?"
         
         cursor.execute(query, id_empresa)
@@ -119,8 +130,6 @@ def get_reporte_vista(view_name, id_empresa):
 # INICIO DE LA APLICACIÓN FLASK
 # ***************************************************************
 
-# IMPORTANTE: Eliminamos o comentamos app.run() porque Render usará Gunicorn
-# con el comando 'gunicorn app:app' en producción.
+# Se mantiene comentado, ya que Render usará Gunicorn (web: gunicorn backend.app:app)
 # if __name__ == '__main__':
-#     # Usamos el puerto 5000 por defecto para desarrollo local
 #     app.run(debug=True)
