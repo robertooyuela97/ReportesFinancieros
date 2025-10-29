@@ -1,20 +1,4 @@
-{
-    "name": "g2bd2/reportes-financieros-api",
-    "description": "API de reportes financieros para el frontend de GitHub Pages.",
-    "type": "project",
-    "require": {
-        "php": ">=8.1"
-        // Para una API simple, no necesitamos frameworks. 
-        // Si usaras un microframework como Slim, lo agregarías aquí: "slim/slim": "^4.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "App\\": "src/"
-        }
-    },
-    "config": {
-        "platform": {
-            "php": "8.2"
-        }
-    }
-}
+Flask==2.3.3
+gunicorn==21.2.0
+pyodbc==4.0.39
+flask-cors==4.0.0
