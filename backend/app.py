@@ -37,81 +37,60 @@ def get_db_connection():
             f"SERVER={DB_SERVER};"
             f"DATABASE={DB_DATABASE};"
             f"UID={DB_USERNAME};"
-            f"PWD={DB_PASSWORD};"
-            f"Encrypt=yes;"
-            f"TrustServerCertificate=no;" # Necesario para Azure SQL
-            f"Connection Timeout=30;"
+            f"PWD={DB_PASSWORD}"
         )
         
-        # Conexión a la base de datos
+        # Intentar conectar
         conn = pyodbc.connect(conn_str)
         return conn
-    
-    except Exception as e:
-        # Registrar el error en el log de Render
-        print(f"ERROR DE CONEXIÓN A LA BASE DE DATOS: {e}")
-        return None
+
+    except ValueError as ve:
+        print(f"ERROR DE CONFIGURACIÓN DE ENTORNO: {ve}")
+        raise
+    except pyodbc.Error as ex:
+        sqlstate = ex.args[0]
+        print(f"ERROR DE CONEXIÓN A DB (SQLSTATE: {sqlstate}): {ex}")
+        raise Exception(f"Error al conectar con la base de datos: {ex.args[1]}")
+
 
 # ***************************************************************
-# RUTAS DE LA API (ENDPOINTs)
+# RUTAS DEL API
 # ***************************************************************
 
-@app.route('/empresas', methods=['GET'])
-def get_empresas():
-    """Ruta para obtener la lista de todas las empresas (tabla Principal)."""
-    conn = get_db_connection()
-    if conn is None:
-        # Retorna error 500 si la conexión falla
-        return jsonify({"status": "error", "message": "Fallo al conectar con la base de datos. Revise las variables de entorno y el firewall de Azure."}), 500
-
-    sql_query = "SELECT REG_Empresa, Nombre_empresa FROM Principal"
-    
+@app.route('/test', methods=['GET'])
+def test_connection():
+    """Prueba la conexión a la base de datos."""
+    conn = None
     try:
-        cursor = conn.cursor()
-        cursor.execute(sql_query)
-        
-        # Obtener los nombres de las columnas
-        columns = [column[0] for column in cursor.description]
-        
-        # Mapear las filas a diccionarios
-        empresas = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        
-        return jsonify({"status": "success", "data": empresas}), 200
-
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({"status": "success", "message": "Conexión a la base de datos exitosa."}), 200
     except Exception as e:
-        print(f"ERROR en /empresas: {e}")
-        return jsonify({"status": "error", "message": f"Error al ejecutar la consulta: {e}"}), 500
+        # Captura y reporta el error de conexión
+        return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if conn:
+            # Asegura que la conexión se cierre incluso si falla
             conn.close()
 
-
-@app.route('/reporte-vista/<string:view_name>', methods=['GET'])
-def get_reporte_by_view(view_name):
+@app.route('/reporte-vista/<view_name>/<int:id_empresa>', methods=['GET'])
+def get_reporte_vista(view_name, id_empresa):
     """
-    Ruta para obtener los datos de una vista (reporte) específica.
-    Requiere el parámetro 'empresa_id' en el query string.
-    Ejemplo: /reporte-vista/Reporte_Vista_Activo_Corriente?empresa_id=1
+    Obtiene los datos de una vista (view) específica para una empresa dada.
+    
+    view_name: El nombre de la vista en la base de datos (e.g., 'vista_balance_general').
+    id_empresa: El ID de la empresa para filtrar los datos.
     """
-    conn = get_db_connection()
-    if conn is None:
-        return jsonify({"status": "error", "message": "Fallo al conectar con la base de datos."}), 500
-    
-    # 1. Validar el ID de la empresa
-    empresa_id = request.args.get('empresa_id')
-    if not empresa_id:
-        return jsonify({"status": "error", "message": "Parámetro 'empresa_id' requerido para el reporte."}), 400
-
-    # 2. Construir el query con el nombre de la vista
-    # **Nota de Seguridad:** En una aplicación real, se usaría una lista blanca 
-    # para validar 'view_name' y evitar inyección SQL en el nombre de la tabla.
-    # Aquí confiamos en que 'view_name' viene de los botones predefinidos del frontend.
-    sql_query = f"SELECT * FROM {view_name} WHERE Empresa = ?"
-    
+    conn = None
     try:
+        conn = get_db_connection()
         cursor = conn.cursor()
-        # Ejecutamos con el parámetro de empresa_id. PyODBC se encarga de la sanitización.
-        cursor.execute(sql_query, (empresa_id,)) 
+        
+        # Consulta segura: Utilizamos f-strings solo para el nombre de la vista
+        # y pasamos el ID de la empresa como parámetro para evitar inyección SQL.
+        query = f"SELECT * FROM {view_name} WHERE Id_Empresa = ?"
+        
+        cursor.execute(query, id_empresa)
         
         # Obtener los nombres de las columnas
         columns = [column[0] for column in cursor.description]
@@ -140,8 +119,8 @@ def get_reporte_by_view(view_name):
 # INICIO DE LA APLICACIÓN FLASK
 # ***************************************************************
 
-if __name__ == '__main__':
-    # Usamos el puerto 5000 por defecto para desarrollo local
-    # En Render, Gunicorn o el servidor de producción se encargará de esto.
-    # El puerto lo define la plataforma, pero 5000 es el estándar de Flask.
-    app.run(host='0.0.0.0', port=5000, debug=False)
+# IMPORTANTE: Eliminamos o comentamos app.run() porque Render usará Gunicorn
+# con el comando 'gunicorn app:app' en producción.
+# if __name__ == '__main__':
+#     # Usamos el puerto 5000 por defecto para desarrollo local
+#     app.run(debug=True)
