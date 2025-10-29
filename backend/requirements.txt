@@ -1,10 +1,20 @@
-blinker==1.9.0
-click==8.3.0
-colorama==0.4.6
-Flask==3.1.2
-flask-cors==6.0.1
-itsdangerous==2.2.0
-Jinja2==3.1.6
-MarkupSafe==3.0.3
-pyodbc==5.3.0
-Werkzeug==3.1.3
+{
+    "name": "g2bd2/reportes-financieros-api",
+    "description": "API de reportes financieros para el frontend de GitHub Pages.",
+    "type": "project",
+    "require": {
+        "php": ">=8.1"
+        // Para una API simple, no necesitamos frameworks. 
+        // Si usaras un microframework como Slim, lo agregarías aquí: "slim/slim": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.2"
+        }
+    }
+}
