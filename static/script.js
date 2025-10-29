@@ -14,6 +14,9 @@ let db;
 let auth;
 let currentUserId = null;
 
+// URL base para el API de Flask (funciona localmente y en Azure/Gunicorn)
+const API_BASE_URL = window.location.origin; 
+
 // Definición de las estructuras de datos (Schema básico para generar formularios)
 const ENTITY_SCHEMAS = {
     Efectivo_y_Equivalente_Efectivo: [
@@ -31,6 +34,27 @@ const ENTITY_SCHEMAS = {
         // ... más campos
     ],
     // Agregue más esquemas aquí
+};
+
+// --- FUNCIÓN DE UTILIDAD PARA LLAMADAS AL API DE FLASK ---
+const fetchApi = async (url) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}${url}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+            // Manejar errores HTTP (4xx, 5xx) donde Flask devuelve error JSON
+            const errorMessage = result.message || `Error del servidor (${response.status} ${response.statusText})`;
+            return { status: "error", message: errorMessage };
+        }
+
+        // Flask devuelve { status: 'success', data: [...] } o { status: 'error', message: '...' }
+        return result;
+
+    } catch (error) {
+        console.error("Error de red o parsing JSON:", error);
+        return { status: "error", message: "Error de red: No se pudo conectar con el servidor Flask. Verifique que el backend esté corriendo." };
+    }
 };
 
 // --- INICIALIZACIÓN DE FIREBASE Y AUTENTICACIÓN ---
@@ -58,7 +82,7 @@ window.onload = async () => {
                 console.log("Firebase Auth listo. User ID:", currentUserId);
                 // Iniciar la lógica de la aplicación
                 setupEventListeners();
-                loadInitialData();
+                loadInitialData(); // <-- Ahora carga datos de Flask
             } else {
                 // Si falla la autenticación (no debería pasar en este entorno), usar ID aleatorio
                 currentUserId = crypto.randomUUID();
@@ -66,7 +90,7 @@ window.onload = async () => {
                 if (display) display.textContent = `Anonimo: ${currentUserId.substring(0, 8)}`;
                 console.log("Sesión anónima iniciada. User ID:", currentUserId);
                 setupEventListeners();
-                loadInitialData();
+                loadInitialData(); // <-- Ahora carga datos de Flask
             }
         });
     } catch (error) {
@@ -129,7 +153,7 @@ const showView = (viewName) => {
     }
 };
 
-// --- LÓGICA DE REPORTES (PLACEHOLDERS) ---
+// --- LÓGICA DE REPORTES (CARGA REAL DE DATOS SQL) ---
 const clearReportDisplay = () => {
     const title = document.getElementById('report-title');
     const subtitle = document.getElementById('report-subtitle');
@@ -155,7 +179,8 @@ const clearReportDisplay = () => {
 const handleReportSelection = (event) => {
     const button = event.currentTarget;
     const reportType = button.getAttribute('data-report');
-    const companyId = document.getElementById('empresa-select').value;
+    const empresaSelect = document.getElementById('empresa-select');
+    const companyId = empresaSelect ? empresaSelect.value : '';
     const reportName = button.querySelector('span') ? button.querySelector('span').textContent.replace('<br>', ' ') : '';
 
     document.querySelectorAll('.report-btn').forEach(btn => btn.classList.remove('active'));
@@ -169,7 +194,7 @@ const handleReportSelection = (event) => {
     loadReportData(reportType, companyId, reportName);
 };
 
-const loadReportData = (reportType, companyId, reportName) => {
+const loadReportData = async (reportType, companyId, reportName) => {
     const initial = document.getElementById('initial-message');
     const loading = document.getElementById('loading-message');
     const table = document.getElementById('report-table');
@@ -187,24 +212,37 @@ const loadReportData = (reportType, companyId, reportName) => {
     if (title) title.textContent = reportName.trim();
     if (subtitle) subtitle.textContent = `Para Empresa ID: ${companyId}`;
 
-    // Simulación de carga de datos (debería ser reemplazado por una llamada a Firestore)
-    setTimeout(() => {
-        if (loading) loading.classList.add('hidden');
-        if (table) table.classList.remove('hidden');
-        if (excelBtn) excelBtn.disabled = false;
-        if (pdfBtn) pdfBtn.disabled = false;
+    // --- LLAMADA AL API DE FLASK PARA DATOS DE REPORTE ---
+    const apiUrl = `/api/reporte-vista/${reportType}?empresa_id=${companyId}`;
+    const resultado = await fetchApi(apiUrl);
+    // --- FIN LLAMADA API ---
+    
+    if (loading) loading.classList.add('hidden');
+
+    if (resultado.status === 'success') {
+        if (resultado.data && resultado.data.length > 0) {
+            if (table) table.classList.remove('hidden');
+            if (excelBtn) excelBtn.disabled = false;
+            if (pdfBtn) pdfBtn.disabled = false;
+            
+            // Determinar encabezados dinámicamente de la primera fila
+            const headers = Object.keys(resultado.data[0]);
+            
+            renderTable(headers, resultado.data);
+            
+        } else {
+            // No hay datos
+            if (table) table.classList.add('hidden');
+            alertUser(`No se encontraron datos para el reporte '${reportName}' de la empresa ID ${companyId}.`, "warning");
+        }
+    } else {
+        // Error de API (Conexión fallida, vista no encontrada, etc.)
+        if (table) table.classList.add('hidden');
+        alertUser(resultado.message, "error");
         
-        // Generar datos simulados para el reporte
-        const headers = ['Cuenta', 'Código', 'Debe', 'Haber'];
-        const data = [
-            { Cuenta: 'Efectivo', Código: '1101', Debe: 50000.00, Haber: 0.00 },
-            { Cuenta: 'Cuentas por Cobrar', Código: '1103', Debe: 25000.00, Haber: 0.00 },
-            { Cuenta: 'Inventario', Código: '1106', Debe: 15000.00, Haber: 0.00 },
-            { Cuenta: 'Cuentas por Pagar', Código: '2101', Debe: 0.00, Haber: 30000.00 },
-            { Cuenta: 'Capital Social', Código: '3101', Debe: 0.00, Haber: 60000.00 },
-        ];
-        renderTable(headers, data);
-    }, 1500);
+        // Mostrar mensaje de error en subtítulo
+        if (subtitle) subtitle.textContent = `ERROR: ${resultado.message.substring(0, 100)}...`;
+    }
 };
 
 const renderTable = (headers, data) => {
@@ -215,37 +253,70 @@ const renderTable = (headers, data) => {
     headerRow.innerHTML = '';
     body.innerHTML = '';
 
+    // 1. Renderizar encabezados dinámicamente
     headers.forEach(h => {
         const th = document.createElement('th');
-        th.textContent = h;
+        // Reemplazar guiones bajos por espacios y capitalizar
+        th.textContent = h.replace(/_/g, ' '); 
         headerRow.appendChild(th);
     });
 
+    // 2. Renderizar filas de datos
     let totalDebe = 0;
     let totalHaber = 0;
+    
+    // Verificamos si las columnas Debe y Haber existen para calcular totales
+    const hasDebeHaber = headers.includes('Debe') && headers.includes('Haber');
 
     data.forEach(item => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="whitespace-nowrap">${item.Cuenta}</td>
-            <td class="text-center">${item.Código}</td>
-            <td class="text-right currency-value">${formatCurrency(item.Debe)}</td>
-            <td class="text-right currency-value">${formatCurrency(item.Haber)}</td>
-        `;
+        
+        headers.forEach(header => {
+            const td = document.createElement('td');
+            let value = item[header];
+            
+            // Intenta formatear como moneda si parece un número y no es un ID
+            if (!isNaN(parseFloat(value)) && isFinite(value) && header !== 'Empresa' && header !== 'REG_Empresa') {
+                td.classList.add('text-right', 'currency-value');
+                td.textContent = formatCurrency(parseFloat(value));
+            } else {
+                td.classList.add('whitespace-nowrap', 'text-left', 'px-4', 'py-3');
+                td.textContent = value || '';
+            }
+            tr.appendChild(td);
+        });
+        
         body.appendChild(tr);
-        totalDebe += item.Debe || 0;
-        totalHaber += item.Haber || 0;
+
+        // Sumar totales si existen las columnas Debe/Haber
+        if (hasDebeHaber) {
+            totalDebe += parseFloat(item.Debe) || 0;
+            totalHaber += parseFloat(item.Haber) || 0;
+        }
     });
 
-    // Fila de totales
-    const totalRow = document.createElement('tr');
-    totalRow.classList.add('total-row');
-    totalRow.innerHTML = `
-        <td colspan="2" class="text-left font-extrabold text-red-700">TOTALES</td>
-        <td class="text-right font-extrabold text-red-700">${formatCurrency(totalDebe)}</td>
-        <td class="text-right font-extrabold text-red-700">${formatCurrency(totalHaber)}</td>
-    `;
-    body.appendChild(totalRow);
+    // 3. Fila de totales (solo si existen Debe y Haber y están al final)
+    if (hasDebeHaber) {
+        // Asumimos que 'Debe' y 'Haber' son las últimas dos columnas
+        const debeIndex = headers.indexOf('Debe');
+        const haberIndex = headers.indexOf('Haber');
+        
+        if (debeIndex === headers.length - 2 && haberIndex === headers.length - 1) {
+            const totalRow = document.createElement('tr');
+            totalRow.classList.add('total-row', 'bg-red-50');
+            
+            // Colspan para la columna de "TOTALES"
+            const colSpanCount = headers.length - 2; 
+            
+            let rowContent = `
+                <td colspan="${colSpanCount}" class="text-left font-extrabold text-red-700 px-4 py-3 border-t-2 border-red-700">TOTALES</td>
+                <td class="text-right font-extrabold text-red-700 px-4 py-3 border-t-2 border-red-700">${formatCurrency(totalDebe)}</td>
+                <td class="text-right font-extrabold text-red-700 px-4 py-3 border-t-2 border-red-700">${formatCurrency(totalHaber)}</td>
+            `;
+            totalRow.innerHTML = rowContent;
+            body.appendChild(totalRow);
+        }
+    }
 };
 
 // --- LÓGICA DE GESTIÓN DE DATOS (NUEVA FUNCIÓN) ---
@@ -444,16 +515,34 @@ const alertUser = (message, type) => {
     }, 5000);
 };
     
-const loadInitialData = () => {
-    // Simular carga de empresas y seleccionar la primera si existe
+const loadInitialData = async () => {
     const empresaSelect = document.getElementById('empresa-select');
-    if (empresaSelect) {
-        empresaSelect.innerHTML = `
-            <option value="">-- Seleccione una empresa --</option>
-            <option value="1">Empresa Innovadora S.A. (ID 1)</option>
-            <option value="2">Comercializadora Global (ID 2)</option>
-        `;
+    if (!empresaSelect) return;
+
+    empresaSelect.innerHTML = `<option value="">-- Cargando empresas... --</option>`;
+    empresaSelect.disabled = true;
+
+    // --- LLAMADA AL API DE FLASK PARA LISTA DE EMPRESAS ---
+    const resultado = await fetchApi('/api/empresas');
+    // --- FIN LLAMADA API ---
+
+    empresaSelect.innerHTML = `<option value="">-- Seleccione una empresa --</option>`;
+    empresaSelect.disabled = false;
+
+    if (resultado.status === 'success' && resultado.data && resultado.data.length > 0) {
+        resultado.data.forEach(empresa => {
+            const option = document.createElement('option');
+            // REG_Empresa es el ID (value), Nombre_empresa es el texto
+            option.value = empresa.REG_Empresa;
+            option.textContent = `${empresa.Nombre_empresa} (ID ${empresa.REG_Empresa})`;
+            empresaSelect.appendChild(option);
+        });
+    } else {
+        alertUser(resultado.message || "Error al cargar la lista de empresas. Verifique la conexión a Azure SQL.", "error");
+        empresaSelect.innerHTML = `<option value="">-- ERROR de conexión --</option>`;
+        empresaSelect.disabled = true;
     }
+
     // Seleccionar Reportes como vista inicial
     showView('reportes');
 };
