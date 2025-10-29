@@ -5,208 +5,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema Contable | Reportes y Gestión G2BD2</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     
-    <!-- Librerías de Exportación -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    <!-- Estilos separados -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+<body class="bg-gradient-to-br from-gray-50 to-white min-h-screen">
 
-    <!-- Header -->
-    <header class="bg-gradient-to-r from-red-700 via-red-600 to-red-700 shadow-2xl">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-3">
-                    <div class="bg-white p-3 rounded-xl shadow-lg">
-                        <i class="ph-fill ph-chart-line text-3xl text-red-600"></i>
+    <header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-20">
+        </header>
+
+    <main class="py-10">
+        <div id="view-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div id="alert-container" class="mb-4"></div>
+
+            <h1 class="text-3xl font-bold leading-tight text-gray-900 flex items-center gap-3">
+                <i class="ph-fill ph-calculator text-red-600"></i>
+                Sistema Contable G2BD2
+            </h1>
+            <p class="mt-2 text-lg text-gray-500">Gestión de Reportes y Entidades</p>
+
+            <div class="mt-8 bg-white overflow-hidden shadow-xl rounded-2xl p-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 border-b pb-6 border-gray-100">
+                    <div class="md:col-span-1">
+                        <label for="empresa-select" class="block text-sm font-medium text-gray-700">Seleccione Empresa:</label>
+                        <select id="empresa-select" disabled class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-lg bg-gray-50 disabled:opacity-75">
+                            <option value="">Cargando...</option>
+                        </select>
                     </div>
-                    <div>
-                        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                            Sistema Contable G2BD2
-                        </h1>
-                        <p class="text-red-100 text-sm">Reportes y Gestión de Datos</p>
+                    
+                    <div class="md:col-span-1">
+                        <label for="reporte-select" class="block text-sm font-medium text-gray-700">Seleccione Reporte/Entidad:</label>
+                        <select id="reporte-select" class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-lg">
+                            <option value="">-- Seleccione... </option>
+                            <optgroup label="Reportes Financieros (VISTAS)">
+                                <option value="view_Balance_Comprobacion">Balance de Comprobación</option>
+                                <option value="view_Estado_Resultados">Estado de Resultados</option>
+                                <option value="view_Balance_General">Balance General</option>
+                            </optgroup>
+                            <optgroup label="Gestión de Entidades (TABLAS)">
+                                </optgroup>
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-1 flex items-end">
+                        <button id="export-excel-btn" 
+                                disabled
+                                class="w-full flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="ph-fill ph-file-xls text-xl"></i>
+                            Exportar a Excel
+                        </button>
                     </div>
                 </div>
+
+                <div id="tabs-container" class="flex border-b border-gray-200 mb-6 hidden">
+                    <button id="tab-view" class="tab-btn px-4 py-2 text-sm text-gray-500 hover:text-gray-900 active" data-tab="view">
+                        <i class="ph-fill ph-table"></i> Ver Registros
+                    </button>
+                    <button id="tab-manage" class="tab-btn px-4 py-2 text-sm text-gray-500 hover:text-gray-900 ml-4" data-tab="manage">
+                        <i class="ph-fill ph-pencil-line"></i> Gestionar (CRUD)
+                    </button>
+                </div>
+
+                <div id="content-area">
+                    <div id="report-table-area" class="overflow-x-auto custom-scrollbar">
+                        <div id="loading-message" class="text-center py-10 text-gray-500 hidden">
+                            <svg class="animate-spin h-8 w-8 text-red-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="mt-3">Cargando datos...</p>
+                        </div>
+                    </div>
                 
-                <div class="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-4 py-3 rounded-xl">
-                    <i class="ph-fill ph-user-circle text-white text-xl"></i>
-                    <div class="text-xs text-red-100">
-                        <span class="font-medium block">Usuario ID:</span>
-                        <span id="user-id-display" class="font-bold text-white">Cargando...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- Tabs de Navegación (Reportes vs Gestión de Datos) -->
-        <div class="bg-white rounded-t-xl shadow-md border-b border-gray-200">
-            <div class="flex space-x-4 px-6 pt-4">
-                <button id="tab-reportes" data-view="reportes" 
-                        class="tab-btn active text-gray-800 py-3 px-4 text-lg transition duration-150 ease-in-out flex items-center gap-2">
-                    <i class="ph-fill ph-folders text-xl"></i> Reportes Financieros
-                </button>
-                <button id="tab-gestion" data-view="gestion" 
-                        class="tab-btn text-gray-500 py-3 px-4 text-lg hover:text-red-600 transition duration-150 ease-in-out flex items-center gap-2">
-                    <i class="ph-fill ph-database text-xl"></i> Gestión de Datos
-                </button>
-            </div>
-        </div>
-
-        <!-- Contenedor Principal de Vistas -->
-        <div id="view-container" class="bg-white rounded-b-2xl shadow-xl p-6 mb-8">
-            
-            <!-- VISTA DE REPORTES -->
-            <div id="reportes-view" class="fade-in-up">
-                
-                <h2 class="text-xl font-bold text-gray-800 mb-6">1. Selección de Reporte</h2>
-
-                <!-- Selector de Empresa (Se mantiene) -->
-                <div class="mb-6 flex items-center gap-4 p-4 border rounded-xl bg-red-50/50">
-                    <i class="ph-fill ph-building text-2xl text-red-600"></i>
-                    <label for="empresa-select" class="text-sm font-medium text-gray-600">Seleccione la Empresa:</label>
-                    <select id="empresa-select" 
-                        class="flex-1 bg-white border border-gray-300 rounded-lg p-2 text-gray-700 font-semibold focus:ring-red-500 focus:border-red-500 max-w-sm">
-                        <option value="">Seleccione una empresa...</option>
-                        <option value="1">Empresa Innovadora S.A. (ID 1)</option>
-                        <option value="2">Comercializadora Global (ID 2)</option>
-                    </select>
-                </div>
-            
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <!-- Balance de Comprobación -->
-                    <button data-report="view_Balance_Comprobacion" 
-                            class="report-btn control-btn bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-5 rounded-xl shadow-lg flex flex-col items-center justify-center gap-2 relative">
-                        <i class="ph-fill ph-scale text-3xl"></i>
-                        <span class="text-sm text-center leading-tight">Balance de<br>Comprobación</span>
-                    </button>
-                    
-                    <!-- Estado de Resultados -->
-                    <button data-report="view_Estado_Resultados" 
-                            class="report-btn control-btn bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 px-5 rounded-xl shadow-lg flex flex-col items-center justify-center gap-2 relative">
-                        <i class="ph-fill ph-chart-line-up text-3xl"></i>
-                        <span class="text-sm text-center leading-tight">Estado de<br>Resultados</span>
-                    </button>
-                    
-                    <!-- Balance Financiero -->
-                    <button data-report="view_Balance_Financiero" 
-                            class="report-btn control-btn bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-4 px-5 rounded-xl shadow-lg flex flex-col items-center justify-center gap-2 relative">
-                        <i class="ph-fill ph-currency-circle-dollar text-3xl"></i>
-                        <span class="text-sm text-center leading-tight">Balance<br>Financiero</span>
-                    </button>
-                    
-                    <!-- Movimientos de Cuentas -->
-                    <button data-report="view_Movimientos_Cuentas" 
-                            class="report-btn control-btn bg-gradient-to-br from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-4 px-5 rounded-xl shadow-lg flex flex-col items-center justify-center gap-2 relative">
-                        <i class="ph-fill ph-arrows-clockwise text-3xl"></i>
-                        <span class="text-sm text-center leading-tight">Movimientos<br>de Cuentas</span>
-                    </button>
-                </div>
-            
-                <!-- Sección de Visualización del Reporte (Se mantiene) -->
-                <div id="report-visualization-card" class="bg-gray-50 rounded-xl shadow-inner p-6">
-                    
-                    <!-- Header del Reporte -->
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b-2 border-gray-200">
-                        <div>
-                            <h3 id="report-title" class="text-2xl font-bold text-gray-800 mb-1">
-                                Seleccione un reporte
-                            </h3>
-                            <p id="report-subtitle" class="text-sm text-gray-500">Datos mostrados a continuación.</p>
-                        </div>
-                        
-                        <div class="flex gap-2">
-                            <button id="export-excel-btn" 
-                                    disabled
-                                    class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600">
-                                <i class="ph-fill ph-file-xls text-xl"></i>
-                                <span class="hidden sm:inline">Excel</span>
-                            </button>
-                            <button id="export-pdf-btn" 
-                                    disabled
-                                    class="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600">
-                                <i class="ph-fill ph-file-pdf text-xl"></i>
-                                <span class="hidden sm:inline">PDF</span>
-                            </button>
-                        </div>
-                    </div>
-    
-                    <!-- Contenido del Reporte -->
-                    <div id="report-content" class="custom-scrollbar overflow-x-auto min-h-[300px]">
-                        
-                        <!-- Mensaje de Carga -->
-                        <div id="loading-message" class="text-center py-16 hidden">
-                            <i class="ph-fill ph-circle-notch spin text-6xl text-red-600 mb-4 inline-block"></i>
-                            <p class="text-gray-600 font-medium">Cargando datos del reporte...</p>
-                            <p class="text-gray-400 text-sm mt-2">Por favor espere</p>
-                        </div>
-    
-                        <!-- Mensaje Inicial -->
-                        <div id="initial-message" class="text-center py-16">
-                            <i class="ph-duotone ph-chart-pie-slice text-6xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-600 font-medium mb-2">Bienvenido al Sistema de Reportes</p>
-                            <p class="text-gray-400 text-sm">Seleccione una empresa y luego un tipo de reporte para visualizar los datos financieros.</p>
-                        </div>
-    
-                        <!-- Tabla del Reporte -->
-                        <table id="report-table" class="report-table w-full hidden">
-                            <thead>
-                                <tr id="table-header"></tr>
-                            </thead>
-                            <tbody id="table-body"></tbody>
-                        </table>
-    
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA DE GESTIÓN DE DATOS (NUEVA FUNCIÓN) -->
-            <div id="gestion-view" class="fade-in-up hidden">
-                <h2 class="text-xl font-bold text-gray-800 mb-6">1. Selección de Entidad para Gestión</h2>
-
-                <!-- Controles de Selección de Entidad -->
-                <div class="mb-8 flex items-center gap-4 p-4 border rounded-xl bg-blue-50/50">
-                    <i class="ph-fill ph-table text-2xl text-blue-600"></i>
-                    <label for="entity-select" class="text-sm font-medium text-gray-600">Seleccionar Tabla/Entidad:</label>
-                    <select id="entity-select" 
-                        class="flex-1 bg-white border border-gray-300 rounded-lg p-2 text-gray-700 font-semibold focus:ring-blue-500 focus:border-blue-500 max-w-sm">
-                        <option value="">-- Seleccione una entidad --</option>
-                        <option value="Efectivo_y_Equivalente_Efectivo">Efectivo y Equivalente de Efectivo</option>
-                        <option value="Cuentas_y_Documentos_Por_Cobrar">Cuentas y Documentos Por Cobrar</option>
-                        <option value="Propiedad_Planta_y_Equipo">Propiedad, Planta y Equipo</option>
-                        <!-- Agregue más opciones aquí según sus tablas -->
-                    </select>
-                </div>
-                
-                <h2 class="text-xl font-bold text-gray-800 mb-6">2. Formulario de Registro/Actualización</h2>
-
-                <!-- Contenedor del Formulario Dinámico -->
-                <div id="data-entry-container" class="bg-gray-50 rounded-xl shadow-inner p-6 min-h-[400px]">
-                    <div id="data-entry-message" class="text-center py-16">
-                        <i class="ph-duotone ph-pencil-line text-6xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-600 font-medium mb-2">Seleccione una entidad para cargar el formulario de gestión.</p>
-                        <p class="text-gray-400 text-sm">Aquí podrá ingresar y actualizar los registros contables.</p>
-                    </div>
-
-                    <!-- Formulario se generará aquí -->
                     <form id="data-entry-form" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden"></form>
 
-                    <!-- Botón "Guardar Registro" - Solicitado por el usuario -->
                     <div id="save-button-container" class="mt-8 pt-6 border-t border-gray-200 hidden">
                         <button id="save-record-btn" 
                                 disabled
@@ -218,19 +98,15 @@
                 </div>
             </div>
 
-        </div> <!-- Fin de view-container -->
+        </div> </main>
 
-    </main>
-
-    <!-- Footer -->
     <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 mt-8">
         <div class="text-center text-gray-500 text-sm">
             <p>&copy; 2025 ProyectoContable G2BD2 | Sistema de Reportería Financiera</p>
-            <p class="mt-1">Desarrollado con <i class="ph-fill ph-heart text-red-500"></i> para Bases de Datos 2</p>
+            <p class="mt-1">Desarrollado con <i class="ph-fill ph-heartbeat text-red-600"></i> y la asistencia de <a href="#" class="text-gray-700 hover:text-red-600 font-medium">Gemini</a>.</p>
         </div>
     </footer>
 
-    <!-- Lógica JS separada (módulo) -->
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="/static/script.js"></script> 
 </body>
 </html>
