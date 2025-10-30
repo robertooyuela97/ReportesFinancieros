@@ -1,139 +1,25 @@
-/* styles.css
-   Contiene los estilos personalizados extraídos del HTML. Mantiene colores, animaciones y clases personalizadas.
-*/
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
-
-body {
-    font-family: 'Inter', sans-serif;
+/* Estilos base */
+.card {
+  @apply bg-white shadow-xl rounded-2xl p-6 border border-gray-100;
 }
 
-/* Animación de carga */
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.btn {
+  @apply px-4 py-2 rounded-lg font-semibold transition-all;
 }
 
-.spin {
-    animation: spin 1s linear infinite;
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
 }
 
-/* Estilos personalizados para tablas (Reportes) */
-.report-table {
-    border-collapse: separate;
-    border-spacing: 0;
-    overflow: hidden;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+.btn-secondary {
+  @apply bg-gray-200 hover:bg-gray-300;
 }
 
-.report-table thead th {
-    background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
-    color: white;
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.05em;
-    padding: 1rem;
-    border: none;
+.btn-export {
+  @apply bg-green-600 text-white hover:bg-green-700;
 }
 
-.report-table tbody tr {
-    transition: all 0.2s ease;
-}
-
-.report-table tbody tr:hover {
-    background-color: #fef2f2;
-    transform: scale(1.01);
-}
-
-.report-table tbody tr.total-row {
-    background: linear-gradient(to right, #fef2f2, #fee2e2);
-    font-weight: 700;
-    border-top: 3px solid #dc2626;
-    border-bottom: 3px solid #dc2626;
-}
-
-.report-table tbody tr.total-row:hover {
-    background: linear-gradient(to right, #fee2e2, #fecaca);
-}
-
-.report-table td {
-    padding: 0.875rem 1rem;
-    border-bottom: 1px solid #f3f4f6;
-}
-
-/* Botones de reporte/entidad activos */
-.control-btn {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.control-btn.active {
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3);
-    transform: scale(1.05);
-    z-index: 10;
-}
-
-.tab-btn {
-    border-bottom: 3px solid transparent;
-}
-
-.tab-btn.active {
-    border-bottom-color: #dc2626; /* Red-600 */
-    font-weight: 600;
-    color: #1f2937; /* Gray-800 */
-}
-
-/* Efectos de entrada */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.fade-in-up {
-    animation: fadeInUp 0.5s ease-out;
-}
-
-/* Scrollbar personalizado */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #dc2626;
-    border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #b91c1c;
-}
-
-/* Estilos para valores monetarios */
-.currency-value {
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
-    color: #059669;
-}
-
-.currency-negative {
-    color: #dc2626;
-}
-
-/* Toast/alert animation helper */
-.fixed.fade-in-up {
-    animation: fadeInUp 0.35s ease-out;
+/* Tabla de reportes */
+#report-table th, #report-table td {
+  @apply border p-2;
 }

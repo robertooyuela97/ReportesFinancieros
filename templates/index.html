@@ -1,122 +1,118 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Contable | Reportes y Gestión G2BD2</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema Contable | Reportes y Gestión G2BD2</title>
 
-    <link rel="stylesheet" href="/static/style.css">
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- jsPDF y autoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- SheetJS (Excel Export) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "tu-proyecto.firebaseapp.com",
+      projectId: "tu-proyecto",
+      storageBucket: "tu-proyecto.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef123456"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.db = db;
+  </script>
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-white min-h-screen">
 
-    <header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-20">
-    </header>
+<body class="bg-gray-50 text-gray-800">
+  <!-- HEADER -->
+  <header class="bg-blue-700 text-white py-4 px-6 shadow-md">
+    <h1 class="text-2xl font-bold">📊 Sistema Contable G2BD2</h1>
+    <p class="text-sm opacity-90">Reportes Financieros y Gestión de Datos</p>
+  </header>
 
-    <main class="py-10">
-        <div id="view-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div id="alert-container" class="mb-4"></div>
+  <main class="p-6 space-y-6 max-w-7xl mx-auto">
 
-            <h1 class="text-3xl font-bold leading-tight text-gray-900 flex items-center gap-3">
-                <i class="ph-fill ph-calculator text-red-600"></i>
-                Sistema Contable G2BD2
-            </h1>
-            <p class="mt-2 text-lg text-gray-500">Gestión de Reportes y Entidades</p>
+    <!-- BOTONES DE NAVEGACIÓN -->
+    <div class="flex gap-4 justify-end">
+      <button id="report-view-btn" class="btn btn-primary">📈 Ver Reportes</button>
+      <button id="data-view-btn" class="btn btn-secondary">🗂️ Gestión de Datos</button>
+    </div>
 
-            <div class="mt-8 bg-white overflow-hidden shadow-xl rounded-2xl p-8">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 border-b pb-6 border-gray-100">
-                    <div class="md:col-span-1">
-                        <label for="empresa-select" class="block text-sm font-medium text-gray-700">Seleccione Empresa:</label>
-                        <select id="empresa-select" disabled class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-lg bg-gray-50 disabled:opacity-75">
-                            <option value="">Cargando...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="md:col-span-1">
-                        <label for="reporte-select" class="block text-sm font-medium text-gray-700">Seleccione Reporte/Entidad:</label>
-                        <select id="reporte-select" class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-lg">
-                            <option value="">-- Seleccione... </option>
-                            <optgroup label="Reportes Financieros (VISTAS)">
-                                <option value="view_Balance_Comprobacion">Balance de Comprobación</option>
-                                <option value="view_Estado_Resultados">Estado de Resultados</option>
-                                <option value="view_Balance_General">Balance General</option>
-                            </optgroup>
-                            <optgroup label="Gestión de Entidades (TABLAS)">
-                                <!-- ENTIDADES DE GESTIÓN (CRUD) -->
-                                <option value="categoriaProducto_01">1. Categorías de Productos</option>
-                                <option value="productos_02">2. Productos</option>
-                                <option value="telefonoCliente_03">3. Teléfonos de Clientes</option>
-                                <option value="clientes_04">4. Clientes</option>
-                                <option value="telefonoProveedor_05">5. Teléfonos de Proveedores</option>
-                                <option value="proveedor_06">6. Proveedores</option>
-                                <option value="ventas_07">7. Ventas</option>
-                                <option value="detalleVenta_08">8. Detalle de Ventas</option>
-                                <option value="compras_09">9. Compras</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                    
-                    <div class="md:col-span-1 flex items-end">
-                        <button id="export-excel-btn" 
-                                disabled
-                                class="w-full flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i class="ph-fill ph-file-xls text-xl"></i>
-                            Exportar a Excel
-                        </button>
-                    </div>
-                </div>
+    <!-- SECCIÓN REPORTES -->
+    <section id="report-section" class="card">
+      <h2 class="text-xl font-bold mb-4">Reportes Financieros</h2>
 
-                <div id="tabs-container" class="flex border-b border-gray-200 mb-6 hidden">
-                    <button id="tab-view" class="tab-btn px-4 py-2 text-sm text-gray-500 hover:text-gray-900 active" data-tab="view">
-                        <i class="ph-fill ph-table"></i> Ver Registros
-                    </button>
-                    <button id="tab-manage" class="tab-btn px-4 py-2 text-sm text-gray-500 hover:text-gray-900 ml-4" data-tab="manage">
-                        <i class="ph-fill ph-pencil-line"></i> Gestionar (CRUD)
-                    </button>
-                </div>
+      <div class="flex gap-4 items-center mb-4">
+        <select id="empresa-select" class="border rounded-lg p-2">
+          <option value="">Seleccione una empresa</option>
+          <option value="1">Empresa 1 - Diunsa</option>
+          <option value="2">Empresa 2 - Servicios Tecnológicos de HN, S.A.</option>
+          <option value="3">Empresa 3 - Inversiones RRO</option>
+        </select>
+        <button id="generate-report-btn" class="btn btn-primary">Generar Reporte</button>
+        <button id="export-excel-btn" class="btn btn-export">Exportar Excel</button>
+        <button id="export-pdf-btn" class="btn btn-export">Exportar PDF</button>
+      </div>
 
-                <div id="content-area">
-                    <div id="report-table-area" class="overflow-x-auto custom-scrollbar">
-                        <div id="loading-message" class="text-center py-10 text-gray-500 hidden">
-                            <svg class="animate-spin h-8 w-8 text-red-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p class="mt-3">Cargando datos...</p>
-                        </div>
-                    </div>
-                
-                    <form id="data-entry-form" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden"></form>
+      <div class="overflow-x-auto">
+        <table id="report-table" class="w-full text-sm text-left border-collapse border border-gray-300">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="p-2 border">Código</th>
+              <th class="p-2 border">Cuenta</th>
+              <th class="p-2 border text-right">Debe</th>
+              <th class="p-2 border text-right">Haber</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
 
-                    <div id="save-button-container" class="mt-8 pt-6 border-t border-gray-200 hidden">
-                        <button id="save-record-btn" 
-                                disabled
-                                class="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i class="ph-fill ph-floppy-disk text-xl"></i>
-                            Guardar Registro
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <!-- SECCIÓN GESTIÓN DE DATOS -->
+    <section id="data-section" class="card hidden">
+      <h2 class="text-xl font-bold mb-4">Gestión de Datos</h2>
 
-        </div> </main>
+      <div class="mb-4">
+        <label for="entity-select" class="block mb-1 font-medium">Seleccione entidad:</label>
+        <select id="entity-select" class="border rounded-lg p-2">
+          <option value="">Seleccione...</option>
+          <option value="Cuentas">Cuentas</option>
+          <option value="Activos">Activos</option>
+          <option value="Pasivos">Pasivos</option>
+        </select>
+      </div>
 
-    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 mt-8">
-        <div class="text-center text-gray-500 text-sm">
-            <p>&copy; 2025 ProyectoContable G2BD2 | Sistema de Reportería Financiera</p>
-            <p class="mt-1">Desarrollado con <i class="ph-fill ph-heartbeat text-red-600"></i> y la asistencia de <a href="#" class="text-gray-700 hover:text-red-600 font-medium">Gemini</a>.</p>
+      <div id="data-entry-container" class="space-y-4">
+        <p id="data-entry-message" class="text-gray-500">Seleccione una entidad para comenzar.</p>
+        <form id="data-entry-form" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4"></form>
+        <div id="save-button-container" class="hidden">
+          <button id="save-record-btn" class="btn btn-primary w-full">💾 Guardar Registro</button>
         </div>
-    </footer>
+      </div>
+    </section>
+  </main>
 
-    <script type="module" src="/static/script.js"></script> 
+  <footer class="text-center text-gray-600 py-6 text-sm">
+    Proyecto Contable G2BD2 — © 2025 Grupo 2 BD2
+  </footer>
+
+  <!-- Script principal -->
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
